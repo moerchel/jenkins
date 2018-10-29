@@ -1,7 +1,8 @@
 ![Jenkins](https://raw.githubusercontent.com/docker-library/docs/3ab4dafb41dd0e959ff9322b3c50af2519af6d85/jenkins/logo.png)
+
 The Jenkins Continuous Integration and Delivery server.
 
-This is a fully functional [Jenkins](http://jenkins.io/) server, based on the Long Term Support release including [Docker CLI](https://download.docker.com/linux/static/stable/x86_64/) (18.06.1-ce) and [docker-compose](https://github.com/docker/compose/releases/download/) (1.22.0).
+This is a fully functional [Jenkins](http://jenkins.io/) server, based on the Long Term Support release including [Docker CLI](https://download.docker.com/linux/static/stable/x86_64/) (18.06.1-ce) and [docker-compose](https://github.com/docker/compose/releases) (1.22.0).
 
 ## How to use this image
 Here is the code for a *docker-compose.yml* file:
