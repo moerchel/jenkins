@@ -1,10 +1,10 @@
-# docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -u root --entrypoint /bin/bash moerchel/jenkins
+# jenkis version 2.138.3
 FROM jenkins/jenkins:lts
 
 USER root
 
 ENV DOCKERVERSION=18.06.1-ce
-ENV DOCKERCOMPOSEVERSION=1.23.0
+ENV DOCKERCOMPOSEVERSION=1.23.1
 
 RUN curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKERVERSION}.tgz \
   && tar xzvf docker-${DOCKERVERSION}.tgz --strip 1 -C /usr/local/bin docker/docker \
