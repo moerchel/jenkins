@@ -15,8 +15,7 @@ RUN curl -fsSL https://github.com/docker/compose/releases/download/${DOCKERCOMPO
   && chmod +x /usr/local/bin/docker-compose
 
 CMD DOCKER_GID=$(stat -c '%g' /var/run/docker.sock) && \
-    groupadd -for -g ${DOCKER_GID} docker && \
-    usermod -aG docker jenkins && \
-	chown -R 1000:1000 /var/jenkins_home &&\
-    su -c "/usr/local/bin/jenkins.sh" jenkins
-
+  groupadd -for -g ${DOCKER_GID} docker && \
+  usermod -aG docker jenkins && \
+  chown -R 1000:1000 /var/jenkins_home && \
+  su -c "/usr/local/bin/jenkins.sh" jenkins
