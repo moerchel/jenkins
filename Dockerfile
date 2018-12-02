@@ -3,8 +3,8 @@ FROM jenkins/jenkins:lts
 
 USER root
 
-ENV DOCKERVERSION=18.06.1-ce
-ENV DOCKERCOMPOSEVERSION=1.23.1
+ENV DOCKERVERSION=18.09.0
+ENV DOCKERCOMPOSEVERSION=1.23.2
 
 RUN curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKERVERSION}.tgz \
   && tar xzvf docker-${DOCKERVERSION}.tgz --strip 1 -C /usr/local/bin docker/docker \
