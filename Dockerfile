@@ -14,8 +14,11 @@ RUN curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${
 RUN curl -fsSL https://github.com/docker/compose/releases/download/${DOCKERCOMPOSEVERSION}/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose \
   && chmod +x /usr/local/bin/docker-compose
 
-CMD DOCKER_GID=$(stat -c '%g' /var/run/docker.sock) && \
-  groupadd -for -g ${DOCKER_GID} docker && \
-  usermod -aG docker jenkins && \
-  chown -R 1000:1000 /var/jenkins_home && \
+#CMD DOCKER_GID=$(stat -c '%g' /var/run/docker.sock) && \
+#  groupadd -for -g ${DOCKER_GID} docker && \
+#  usermod -aG docker jenkins && \
+#  chown -R 1000:1000 /var/jenkins_home && \
+#  su -c "/usr/local/bin/jenkins.sh" jenkins
+  
+CMD chown -R 1000:1000 /var/jenkins_home && \
   su -c "/usr/local/bin/jenkins.sh" jenkins
