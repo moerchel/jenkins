@@ -1,9 +1,9 @@
-# jenkis version 2.150.2
-FROM jenkins/jenkins:2.150.2
+# jenkis version 2.150.3
+FROM jenkins/jenkins:2.150.3
 
 USER root
 
-ENV DOCKERVERSION=18.09.1
+ENV DOCKERVERSION=18.09.2
 ENV DOCKERCOMPOSEVERSION=1.23.2
 
 RUN curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKERVERSION}.tgz \
