@@ -1,5 +1,5 @@
-# jenkis version 2.164.3
-FROM jenkins/jenkins:2.164.3
+# jenkis version 2.176.1
+FROM jenkins/jenkins:2.176.1
 
 USER root
 
