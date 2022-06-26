@@ -53,7 +53,7 @@ networks:
     driver: bridge
 ~~~~
 
-Here is the code for a more aadvanced *docker-compose.yml* file including docker registry and [traefik](https://doc.traefik.io/traefik/) labels:
+Here is the code for a more advanced *docker-compose.yml* file including docker registry and [traefik](https://doc.traefik.io/traefik/) labels:
 
 ~~~~yml
 version: '3'

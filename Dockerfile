@@ -13,7 +13,7 @@ RUN /usr/bin/curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/
 RUN /usr/bin/curl -fsSL https://github.com/docker/compose/releases/download/${DOCKERCOMPOSEVERSION}/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose \
   && /bin/chmod +x /usr/local/bin/docker-compose
   
-ENTRYPOINT ["/sbin/tini", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 CMD /bin/chown -R 1000:1000 /var/jenkins_home \
   && /sbin/runuser -u jenkins -- /usr/local/bin/jenkins.sh
