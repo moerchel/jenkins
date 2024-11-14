@@ -1,9 +1,9 @@
-FROM jenkins/jenkins:2.462.2
+FROM jenkins/jenkins:2.479.1
 
 USER root
 
 ENV DOCKERVERSION=27.3.1
-ENV DOCKERCOMPOSEVERSION=2.29.7
+ENV DOCKERCOMPOSEVERSION=2.30.3
 
 RUN /usr/bin/curl -fsSLO https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKERVERSION}.tgz \
   && /bin/tar xzvf docker-${DOCKERVERSION}.tgz --strip 1 -C /usr/local/bin docker/docker \
