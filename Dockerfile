@@ -1,4 +1,4 @@
-FROM jenkins/jenkins:2.528.3-jdk21
+FROM jenkins/jenkins:2.541.1-jdk21
 
 USER root
 
