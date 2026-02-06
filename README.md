@@ -2,7 +2,7 @@
 
 The Jenkins Continuous Integration and Delivery server.
 
-This is a fully functional [Jenkins](http://jenkins.io/) server, based on the Long Term Support release (2.528.3) including [Docker CLI](https://download.docker.com/linux/static/stable/x86_64/) (29.1.4) and [docker-compose](https://github.com/docker/compose/releases) (5.0.1).
+This is a fully functional [Jenkins](http://jenkins.io/) server, based on the Long Term Support release (2.541.1) including [Docker CLI](https://download.docker.com/linux/static/stable/x86_64/) (29.2.1) and [docker-compose](https://github.com/docker/compose/releases) (5.0.2).
 
 ## How to use this image
 
