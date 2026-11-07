@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # New Jenkins LTS releases (FROM jenkins/jenkins:...-lts-jdk21). Debian
+  # packages and the Docker tools are updated by the weekly rebuild.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
