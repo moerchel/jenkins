@@ -1,70 +1,294 @@
 name: Docker
 
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
 on:
-#  schedule:
-#    - cron: '27 4 * * *'
+  # Weekly rebuild. A release is only created if packages changed.
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
   push:
-    branches: [ "master" ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
+    branches: [ master ]
+    # Changes that don't affect the image don't trigger a build/release
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.github/dependabot.yml'
+      - '.github/workflows/cleanup-packages.yml'
+    # Manually pushed tags (e.g. 20260416, v1.2.3) are published as image tags
+    tags: [ '2*', 'v*.*.*' ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ master ]
 
 env:
-  # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
   # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
 
+# No permissions by default, each job requests what it needs
+permissions: {}
+
+# One run per branch at a time; only superseded PR runs are cancelled,
+# a running publish on master is never interrupted
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
+      - name: ShellCheck
+        run: shellcheck entrypoint.sh healthcheck.sh .github/scripts/*.sh
+
+  build:
+    needs: lint
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      # Upload of Trivy results to the Security tab
+      security-events: write
+    outputs:
+      release: ${{ steps.decide.outputs.release }}
+      version: ${{ steps.prepare.outputs.version }}
+      title: ${{ steps.prepare.outputs.title }}
+      notes: ${{ steps.prepare.outputs.notes }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      # Workaround: https://github.com/docker/build-push-action/issues/461
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extract metadata (tags, labels) for Docker
-      # https://github.com/docker/metadata-action
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+      # Build an amd64 image into the local docker daemon first, so it can be
+      # tested and scanned before anything is published.
+      # Scheduled builds skip the cache so "apt-get upgrade" really fetches updates.
+      - name: Build image for test and vulnerability scan
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          platforms: linux/amd64
+          pull: true
+          no-cache: ${{ github.event_name == 'schedule' }}
+          load: true
+          tags: jenkins:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Jenkins together with alpinedockersocat: health check behind a path
+      # prefix, Docker CLI/Compose/Buildx, a job with Docker commands and a
+      # clean shutdown, see the script for details
+      - name: Smoke test
+        run: .github/scripts/smoke-test.sh jenkins:scan ghcr.io/moerchel/alpinedockersocat:latest
+
+      # Report all known vulnerabilities to the repository's Security tab
+      - name: Trivy scan (report)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: jenkins:scan
+          format: sarif
+          output: trivy-results.sarif
+          ignore-unfixed: true
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          timeout: 15m
+
+      - name: Upload Trivy results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+      # Fail the build (and don't publish) on HIGH/CRITICAL vulnerabilities
+      # of Debian packages that already have a fix available. Findings in
+      # Jenkins itself (jenkins.war, git-lfs) can only be fixed by a new
+      # Jenkins release, they are reported above but don't block the build.
+      - name: Trivy scan (gate)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_SKIP_DB_UPDATE: true
+        with:
+          image-ref: jenkins:scan
+          format: table
+          ignore-unfixed: true
+          vuln-type: os
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          timeout: 15m
+
+      # Compare the software versions with the currently published image and
+      # decide whether to publish and to create a release:
+      #   push to master / manual run on master -> publish + release
+      #   weekly schedule                       -> publish + release only if versions changed
+      #   pushed tag                            -> publish (image tag = git tag), no release
+      - name: Compare packages with published image
+        id: decide
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          PUBLISHED: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          .github/scripts/packages.sh jenkins:scan > new.txt
+          test -s new.txt
+          if docker pull -q --platform linux/amd64 "$PUBLISHED" >/dev/null 2>&1; then
+            .github/scripts/packages.sh "$PUBLISHED" > old.txt || : > old.txt
+          else
+            : > old.txt
+          fi
+
+          # Build a table of changed packages
+          declare -A old new
+          while IFS=$'\t' read -r n v; do old[$n]=$v; done < old.txt
+          while IFS=$'\t' read -r n v; do new[$n]=$v; done < new.txt
+          for n in $(printf '%s\n' "${!old[@]}" "${!new[@]}" | sort -u); do
+            o=${old[$n]:-}; v=${new[$n]:-}
+            if [ "$o" != "$v" ]; then echo "| $n | ${o:--} | ${v:--} |"; fi
+          done > changes.md
+
+          changed=false
+          if [ -s changes.md ]; then changed=true; fi
+          on_default=false
+          if [ "$REF" = "refs/heads/master" ]; then on_default=true; fi
+          case "$EVENT" in
+            schedule) publish=$changed; release=$changed ;;
+            *)        publish=true;     release=$on_default ;;
+          esac
+          echo "Packages changed: $changed, publish: $publish, release: $release"
+          cat changes.md
+          {
+            echo "changed=$changed"
+            echo "publish=$publish"
+            echo "release=$release"
+          } >> "$GITHUB_OUTPUT"
+
+      # Version YYYYMMDD (YYYYMMDD.1, .2, ... for further releases on the same day)
+      # and release notes
+      - name: Prepare release
+        id: prepare
+        if: steps.decide.outputs.release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          EVENT: ${{ github.event_name }}
+          CHANGED: ${{ steps.decide.outputs.changed }}
+        run: |
+          base=$(date -u +%Y%m%d); version=$base; n=0
+          while gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$version" >/dev/null 2>&1; do
+            n=$((n + 1)); version="$base.$n"
+          done
+
+          v() { awk -F'\t' -v n="$1" '$1 == n {print $2}' new.txt; }
+          jenkins=$(v jenkins.war)
+          java=$(v java)
+          debian=$(docker run --rm --entrypoint cat jenkins:scan /etc/debian_version)
+          docker=$(v docker-ce-cli | sed 's/^[0-9]*://; s/-.*//')
+          compose=$(v docker-compose-plugin | sed 's/-.*//')
+          buildx=$(v docker-buildx-plugin | sed 's/-.*//')
+          title="$version - Jenkins $jenkins"
+          if [ "$EVENT" = "schedule" ]; then title="$title, package updates"; fi
+
+          {
+            echo "## Image"
+            echo
+            echo '```'
+            echo "docker pull $IMAGE:$version"
+            echo '```'
+            echo
+            echo "Also published as \`latest\` and \`master\`."
+            echo
+            echo "Jenkins $jenkins, Java $java, Debian $debian, Docker CLI $docker, Docker Compose $compose, Docker Buildx $buildx."
+            if [ "$CHANGED" = "true" ]; then
+              echo
+              echo "## Updated packages"
+              echo
+              echo "| Package | Previous | New |"
+              echo "|---|---|---|"
+              cat changes.md
+            fi
+          } > notes.md
+
+          {
+            echo "version=$version"
+            echo "title=$title"
+            echo "notes<<EOF_RELEASE_NOTES"
+            cat notes.md
+            echo "EOF_RELEASE_NOTES"
+          } >> "$GITHUB_OUTPUT"
+
+      # Extract metadata (tags, labels) for Docker
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.prepare.outputs.version || 'no-release' }},enable=${{ steps.decide.outputs.release == 'true' }}
+            type=sha
+
+      # Build (all PRs) and push (if decided above) the multi-arch image
+      - name: Build and push Docker image
+        if: github.event_name == 'pull_request' || steps.decide.outputs.publish == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          pull: true
+          no-cache: ${{ github.event_name == 'schedule' }}
+          push: ${{ steps.decide.outputs.publish == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Supply chain attestations
+          provenance: mode=max
+          sbom: true
+
+  # Git tag + GitHub release for the published image. Tags and releases
+  # created with the GITHUB_TOKEN don't trigger another workflow run.
+  release:
+    needs: build
+    if: needs.build.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          TITLE: ${{ needs.build.outputs.title }}
+          NOTES: ${{ needs.build.outputs.notes }}
+        run: |
+          printf '%s\n' "$NOTES" > notes.md
+          gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$TITLE" --notes-file notes.md --generate-notes
