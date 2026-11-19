@@ -19,7 +19,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG DOCKER_GPG_SHA256=1500c1f56fa9e26b9b8f42452a553675796ade0807cdce11975eb98170b3a570
 
 # Debian updates published since the base image was built, and the newest
-# Docker CLI, Compose and Buildx from the Docker apt repository. The weekly
+# Docker CLI, Compose and Buildx from the Docker apt repository. The scheduled
 # rebuild picks up new versions of both.
 # hadolint ignore=DL3005,DL3008
 RUN install -d -m 0755 /etc/apt/keyrings \

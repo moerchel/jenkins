@@ -24,7 +24,7 @@ The release notes name the versions of Jenkins, Java, Debian, Docker CLI, Docker
 ### Updates
 
 * **Jenkins**: the Jenkins version is fixed in the `Dockerfile`. For every new LTS release, Dependabot opens a pull request; it is merged after checking the plugins, so a new Jenkins version never arrives unplanned.
-* **Debian packages and Docker tools**: the image is rebuilt every Monday (around 04:17 UTC) with all Debian updates and the newest Docker CLI, Compose and Buildx. A release is only created if versions changed; the release notes list them.
+* **Debian packages and Docker tools**: the image is rebuilt every 3 days (on the 1st, 4th, 7th, … of the month, around 04:17 UTC) with all Debian updates and the newest Docker CLI, Compose and Buildx. A release is only created if versions changed; the release notes list them.
 
 Every change of the image on the `master` branch creates a release as well (changes to documentation only don't).
 
@@ -76,7 +76,7 @@ Against [Java4Shell (CVE-2026-114938)](https://www.jenkins.io/blog/2026/11/18/mi
 
 ### Watchtower
 
-[Watchtower](https://github.com/nicholas-fedor/watchtower) restarts Jenkins with every new release, which interrupts running builds (see [Start and stop](#start-and-stop)). Releases of the weekly rebuild are published on Mondays around 04:30 UTC. To be safe, give Jenkins more time for the shutdown than the Watchtower default of 10 seconds with `--stop-timeout 120s` (or `WATCHTOWER_TIMEOUT=120s`).
+[Watchtower](https://github.com/nicholas-fedor/watchtower) restarts Jenkins with every new release, which interrupts running builds (see [Start and stop](#start-and-stop)). Releases of the scheduled rebuild are published around 04:30 UTC on the 1st, 4th, 7th, … of the month. To be safe, give Jenkins more time for the shutdown than the Watchtower default of 10 seconds with `--stop-timeout 120s` (or `WATCHTOWER_TIMEOUT=120s`).
 
 To update Jenkins manually instead, use a release tag (e.g. `ghcr.io/moerchel/jenkins:20261107`) or disable Watchtower for the container with the label `com.centurylinklabs.watchtower.enable=false`.
 
