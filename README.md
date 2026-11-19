@@ -2,7 +2,7 @@
 
 [Jenkins](https://www.jenkins.io) LTS with [Docker CLI](https://docs.docker.com/reference/cli/docker/), [Docker Compose](https://docs.docker.com/compose/) and [Docker Buildx](https://docs.docker.com/build/), so jobs can build and run Docker images. Jenkins reaches the Docker daemon of the host over TCP, e.g. through [alpinedockersocat](https://github.com/moerchel/alpinedockersocat).
 
-Based on the official image [`jenkins/jenkins`](https://hub.docker.com/r/jenkins/jenkins) (`*-lts-jdk21`), available for the following architectures:
+Based on the official image [`jenkins/jenkins`](https://hub.docker.com/r/jenkins/jenkins) (`*-lts-jdk25`) with Java 25, which Jenkins supports until September 2029 ([Java support policy](https://www.jenkins.io/doc/book/platform-information/support-policy-java/)). Available for the following architectures:
 
 * amd64
 * arm64
@@ -65,6 +65,10 @@ Traefik only routes to containers that are `healthy`, so Jenkins is reachable th
 
 * `docker build` uses the classic builder. Set `DOCKER_BUILDKIT=1` (in the container or in a job) to use BuildKit instead. `docker buildx build` always uses BuildKit.
 * The Docker daemon runs on the host, so paths in bind mounts (`docker run -v /path:/path`) are paths **on the host**, not in the Jenkins container. A workspace like `/var/jenkins_home/workspace/job` only exists on the host if `jenkins_home` is a bind mount with the same path on the host and in the container (e.g. `/var/jenkins_home:/var/jenkins_home`). Otherwise pass files with the build context, `docker cp` or a named volume.
+
+### Java
+
+Jenkins runs on Java 25. Images up to release `20261116` used Java 21, which Jenkins supports only until September 2027. When switching from such an image, update all plugins before and after the switch (_Manage Jenkins → Plugins_). Agents on other machines need Java 21 or 25 as well. To go back, start the release tag `20261116` again; `JENKINS_HOME` stays compatible.
 
 ### Watchtower
 

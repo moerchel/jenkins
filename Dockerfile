@@ -1,6 +1,6 @@
 # Jenkins LTS. Dependabot opens a pull request for every new LTS release
-# (only tags ending in -lts-jdk21), so core updates are merged deliberately.
-FROM jenkins/jenkins:2.580.2-lts-jdk21
+# (only tags ending in -lts-jdk25), so core updates are merged deliberately.
+FROM jenkins/jenkins:2.580.2-lts-jdk25
 
 LABEL org.opencontainers.image.title="jenkins" \
       org.opencontainers.image.description="Jenkins LTS with Docker CLI, Docker Compose and Docker Buildx" \
