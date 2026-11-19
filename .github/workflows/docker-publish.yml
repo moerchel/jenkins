@@ -48,6 +48,25 @@ jobs:
       - name: ShellCheck
         run: shellcheck entrypoint.sh healthcheck.sh .github/scripts/*.sh
 
+      - name: Hadolint
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+
+      # actionlint has no official action, the official image is used.
+      # Dependabot doesn't update it, check https://github.com/rhysd/actionlint/releases
+      - name: actionlint
+        run: >-
+          docker run --rm -v "$PWD:/repo" -w /repo
+          rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+          -color
+
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
+        with:
+          # Fixed version, so a new zizmor release doesn't fail the build unexpectedly
+          version: 1.32.0
+          advanced-security: false
+          annotations: true
+
   build:
     needs: lint
     runs-on: ubuntu-latest
