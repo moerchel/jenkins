@@ -30,7 +30,9 @@ Every change of the image on the `master` branch creates a release as well (chan
 
 Before an image is published, a smoke test starts Jenkins together with alpinedockersocat and checks the health check, Docker, Compose and Buildx through the TCP connection, a job with Docker commands and the clean shutdown.
 
-Every image is scanned with [Trivy](https://github.com/aquasecurity/trivy), all findings are listed in the repository's [Security tab](https://github.com/moerchel/jenkins/security/code-scanning). Builds with fixable HIGH or CRITICAL vulnerabilities in Debian packages are not published. Findings in Jenkins itself (`jenkins.war`, `git-lfs`) don't block a build, they are fixed by new Jenkins releases.
+Every image is scanned with [Trivy](https://github.com/aquasecurity/trivy), all findings are listed in the repository's [Security tab](https://github.com/moerchel/jenkins/security/code-scanning). Builds with fixable HIGH or CRITICAL vulnerabilities in Debian packages (on amd64 or arm64) are not published. Findings in Jenkins itself (`jenkins.war`, `git-lfs`) don't block a build, they are fixed by new Jenkins releases.
+
+The image is built only once: it is pushed without a tag, tested and scanned, and only then gets its tags. So the published image is exactly the one that was tested.
 
 Old images are removed weekly from the registry: untagged images (old builds) and `sha-*` tags older than 30 days. Release images, _latest_ and _master_ are kept.
 
