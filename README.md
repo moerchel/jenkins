@@ -70,6 +70,8 @@ Traefik only routes to containers that are `healthy`, so Jenkins is reachable th
 
 Jenkins runs on Java 25. Images up to release `20261116` used Java 21, which Jenkins supports only until September 2027. When switching from such an image, update all plugins before and after the switch (_Manage Jenkins → Plugins_). Agents on other machines need Java 21 or 25 as well. To go back, start the release tag `20261116` again; `JENKINS_HOME` stays compatible.
 
+Against [Java4Shell (CVE-2026-114938)](https://www.jenkins.io/blog/2026/11/18/mitigating-java4shell/) the image sets `JDK_JAVA_OPTIONS=-XX:-UseBASE64Intrinsics` until the official image ships a fixed Java (25.0.5.1 or newer). Java prints `NOTE: Picked up JDK_JAVA_OPTIONS` at startup because of it. `JAVA_OPTS` can be set as usual; if you set `JDK_JAVA_OPTIONS` yourself, include `-XX:-UseBASE64Intrinsics`.
+
 ### Watchtower
 
 [Watchtower](https://github.com/nicholas-fedor/watchtower) restarts Jenkins with every new release, which interrupts running builds (see [Start and stop](#start-and-stop)). Releases of the weekly rebuild are published on Mondays around 04:30 UTC. To be safe, give Jenkins more time for the shutdown than the Watchtower default of 10 seconds with `--stop-timeout 120s` (or `WATCHTOWER_TIMEOUT=120s`).

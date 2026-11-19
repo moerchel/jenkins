@@ -42,6 +42,13 @@ RUN install -d -m 0755 /etc/apt/keyrings \
 # BuildKit instead. "docker buildx build" always uses BuildKit.
 ENV DOCKER_BUILDKIT=0
 
+# Java4Shell (CVE-2026-114938): the Base64 intrinsics are disabled until the
+# base image ships Java 25.0.5.1 or newer, as recommended by the Jenkins
+# project: https://www.jenkins.io/blog/2026/11/18/mitigating-java4shell/
+# JDK_JAVA_OPTIONS is read by the java launcher itself, so a JAVA_OPTS set
+# in compose doesn't replace it.
+ENV JDK_JAVA_OPTIONS=-XX:-UseBASE64Intrinsics
+
 COPY --chmod=755 entrypoint.sh healthcheck.sh /usr/local/bin/
 
 # Jenkins needs a while to start, especially with many plugins. During the

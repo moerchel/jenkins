@@ -90,6 +90,14 @@ for v in HOME=/var/jenkins_home USER=jenkins LOGNAME=jenkins "DOCKER_HOST=tcp://
 done
 echo "java (PID $java_pid) runs as jenkins below tini, HOME=/var/jenkins_home"
 
+step "Java4Shell mitigation (CVE-2026-114938)"
+grep -qxF "JDK_JAVA_OPTIONS=-XX:-UseBASE64Intrinsics" <<<"$java_env" ||
+    fail "Jenkins environment lacks JDK_JAVA_OPTIONS=-XX:-UseBASE64Intrinsics"
+docker exec -u jenkins "${p}jenkins" java -XX:+PrintFlagsFinal -version 2>/dev/null |
+    grep -Eq '^ *bool +UseBASE64Intrinsics +:?= +false ' ||
+    fail "UseBASE64Intrinsics is not disabled"
+echo "UseBASE64Intrinsics is disabled"
+
 step "Docker through socat as user jenkins"
 as_jenkins 'docker version --format "client {{.Client.Version}}, server {{.Server.Version}}"'
 as_jenkins 'docker compose version && docker-compose version && docker buildx version'
