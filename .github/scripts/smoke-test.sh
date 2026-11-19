@@ -93,10 +93,14 @@ echo "java (PID $java_pid) runs as jenkins below tini, HOME=/var/jenkins_home"
 step "Java4Shell mitigation (CVE-2026-114938)"
 grep -qxF "JDK_JAVA_OPTIONS=-XX:-UseBASE64Intrinsics" <<<"$java_env" ||
     fail "Jenkins environment lacks JDK_JAVA_OPTIONS=-XX:-UseBASE64Intrinsics"
-docker exec -u jenkins "${p}jenkins" java -XX:+PrintFlagsFinal -version 2>/dev/null |
-    grep -Eq '^ *bool +UseBASE64Intrinsics +:?= +false ' ||
-    fail "UseBASE64Intrinsics is not disabled"
-echo "UseBASE64Intrinsics is disabled"
+# The output is read completely first: "| grep -q" would close the pipe
+# early, the docker CLI then dies from SIGPIPE and pipefail fails the check
+flags=$(docker exec -u jenkins "${p}jenkins" java -XX:+PrintFlagsFinal -version 2>&1) ||
+    fail "java -XX:+PrintFlagsFinal failed: $flags"
+flag=$(grep -E '^ *bool +UseBASE64Intrinsics ' <<<"$flags") ||
+    fail "UseBASE64Intrinsics missing in the output of java -XX:+PrintFlagsFinal"
+[[ $flag =~ =\ +false\  ]] || fail "UseBASE64Intrinsics is not disabled: $flag"
+echo "UseBASE64Intrinsics is disabled: $(xargs <<<"$flag")"
 
 step "Docker through socat as user jenkins"
 as_jenkins 'docker version --format "client {{.Client.Version}}, server {{.Server.Version}}"'
