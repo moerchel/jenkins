@@ -1,9 +1,11 @@
 name: Docker
 
 on:
-  # Weekly rebuild. A release is only created if packages changed.
+  # Rebuild every 3 days, to pick up security fixes soon. A release is only
+  # created if packages changed. "*/3" is the 1st, 4th, 7th, ... 31st
+  # of the month, so at the turn of the month the gap is 1 to 3 days.
   schedule:
-    - cron: '17 4 * * 1'
+    - cron: '17 4 */3 * *'
   workflow_dispatch:
   push:
     branches: [ master ]
@@ -228,7 +230,7 @@ jobs:
       # Compare the software versions with the currently published image and
       # decide whether to publish and to create a release:
       #   push to master / manual run on master -> publish + release
-      #   weekly schedule                       -> publish + release only if versions changed
+      #   scheduled build                       -> publish + release only if versions changed
       #   pushed tag                            -> publish (image tag = git tag), no release
       - name: Compare packages with published image
         id: decide

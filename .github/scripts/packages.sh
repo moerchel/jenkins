@@ -1,7 +1,7 @@
 #!/bin/bash
 # Lists the software versions of an image as "name<TAB>version", sorted:
 # all Debian packages plus Jenkins, Java and git-lfs, which don't come from
-# Debian packages. Used to decide whether the weekly rebuild brings updates.
+# Debian packages. Used to decide whether the scheduled rebuild brings updates.
 set -euo pipefail
 
 image=$1

@@ -8,7 +8,8 @@ name: Clean up packages
 # Only images older than 30 days are touched.
 
 on:
-  # Weekly, two hours after the rebuild in docker-publish.yml
+  # Weekly on Monday at 06:17 UTC, two hours after the time of the scheduled
+  # rebuilds in docker-publish.yml
   schedule:
     - cron: '17 6 * * 1'
   workflow_dispatch:
