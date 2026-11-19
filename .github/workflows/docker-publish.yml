@@ -37,6 +37,7 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -70,6 +71,8 @@ jobs:
   build:
     needs: lint
     runs-on: ubuntu-latest
+    # Normally a few minutes, the limit stops a hanging run (default: 6 hours)
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: write
@@ -373,6 +376,7 @@ jobs:
     needs: build
     if: needs.build.outputs.release == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
