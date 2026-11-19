@@ -1,13 +1,21 @@
 version: 2
 updates:
+  # New versions are only proposed after 7 days, so a compromised or broken
+  # release is usually withdrawn before it gets here. Security updates are
+  # not delayed.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
 
   # New Jenkins LTS releases (FROM jenkins/jenkins:...-lts-jdk25). Debian
   # packages and the Docker tools are updated by the scheduled rebuild.
-  - package-ecosystem: docker
+  # No cooldown: Jenkins security fixes are released as regular LTS
+  # versions, which Dependabot would delay like any other update. The pull
+  # request is only merged after checking the plugins anyway.
+  - package-ecosystem: docker # zizmor: ignore[dependabot-cooldown]
     directory: /
     schedule:
       interval: weekly
